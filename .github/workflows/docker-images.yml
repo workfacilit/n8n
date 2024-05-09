@@ -1,16 +1,17 @@
 name: Docker Image CI
 
 on:
-  release:
-    types: [published]
-
+  push:
+    branches:
+      - develop
+      
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4.1.1
-
+ 
       - name: Get the version
         id: vars
         run: echo ::set-output name=tag::$(echo ${GITHUB_REF:14})
@@ -45,4 +46,4 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/n8n:${{ steps.vars.outputs.tag }}
-            ghcr.io/${{ github.repository_owner }}/n8n:${{ steps.vars.outputs.tag }}
+            ${{ secrets.DOCKER_USERNAME }}/n8n:latest
