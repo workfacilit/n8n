@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - develop
+      - master-develop
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -30,7 +31,7 @@ jobs:
       - name: Build
         uses: docker/build-push-action@v5.1.0
         with:
-          context: ./docker/images/n8n-custom
+          context: ./
           build-args: |
             N8N_VERSION=${{ steps.vars.outputs.tag }}
           platforms: linux/amd64,linux/arm64
@@ -39,3 +40,5 @@ jobs:
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/n8n:${{ steps.vars.outputs.tag }}
             ${{ secrets.DOCKER_USERNAME }}/n8n:latest
+            ${{ secrets.DOCKER_USERNAME }}/n8n:${{ steps.vars.outputs.tag }}-${{ github.ref_slug }}
+            ${{ secrets.DOCKER_USERNAME }}/n8n:latest-${{ github.ref_slug }}
