@@ -30,7 +30,7 @@ jobs:
       - name: Build
         uses: docker/build-push-action@v5.1.0
         with:
-          context: ./docker/images/n8n
+          context: ./docker/images/n8n-custom
           build-args: |
             N8N_VERSION=${{ steps.vars.outputs.tag }}
           platforms: linux/amd64,linux/arm64
