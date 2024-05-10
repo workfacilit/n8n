@@ -19,7 +19,20 @@ convict.addFormat({
 	coerce: (rawStr: string) => rawStr.split(','),
 	validate: ensureStringArray,
 });
-
+console.log('####################');
+console.log('####################');
+console.log('####################');
+console.log('####################');
+console.log('####################');
+console.log('####################');
+console.log('####################');
+console.log('####################');
+console.log('####################');
+console.log('####################');
+console.log('####################');
+console.log('####################');
+console.log('####################');
+console.log('####################');
 export const schema = {
 	database: {
 		type: {
