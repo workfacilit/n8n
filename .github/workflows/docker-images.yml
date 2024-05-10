@@ -40,5 +40,5 @@ jobs:
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/n8n:${{ steps.vars.outputs.tag }}
             ${{ secrets.DOCKER_USERNAME }}/n8n:latest
-            ${{ secrets.DOCKER_USERNAME }}/n8n:${{ steps.vars.outputs.tag }}- ${{github.ref}}
+            ${{ secrets.DOCKER_USERNAME }}/n8n:${{github.ref}}
             ${{ secrets.DOCKER_USERNAME }}/n8n:latest-${{github.ref}}
