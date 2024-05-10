@@ -6,7 +6,7 @@ on:
     branches:
       - develop
       - master-develop
-      - sss
+      - save
       - ss
 jobs:
   build:
