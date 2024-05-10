@@ -139,7 +139,7 @@ export default defineComponent({
 					try {
 						await this.cloudPlanStore.checkForCloudPlanData();
 					} catch (error) {
-						console.warn('Failed to check for cloud plan data', error);
+						console.warn('Falha ao verificar os dados do plano de nuvem', error);
 					}
 				}
 				await this.settingsStore.getSettings();
