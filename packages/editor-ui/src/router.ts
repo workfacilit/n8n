@@ -491,6 +491,30 @@ export const routes = [
 				},
 			},
 			{
+				path: 'usage2',
+				name: VIEWS.USAGE,
+				components: {
+					settingsView: SettingsUsageAndPlan,
+				},
+				meta: {
+					middleware: ['authenticated', 'custom'],
+					middlewareOptions: {
+						custom: () => {
+							const settingsStore = useSettingsStore();
+							return !settingsStore.settings.hideUsagePage;
+						},
+					},
+					telemetry: {
+						pageCategory: 'settings',
+						getProperties(route: RouteLocation) {
+							return {
+								feature: 'usage',
+							};
+						},
+					},
+				},
+			},
+			{
 				path: 'personal',
 				name: VIEWS.PERSONAL_SETTINGS,
 				components: {
