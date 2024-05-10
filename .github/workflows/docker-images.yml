@@ -7,6 +7,7 @@ on:
       - develop
       - master-develop
       - sss
+      - ss
 jobs:
   build:
     runs-on: ubuntu-latest
