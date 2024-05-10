@@ -7,14 +7,6 @@
 			[$style.sideMenuCollapsed]: isCollapsed,
 		}"
 	>
-		<div
-			id="collapse-change-button"
-			:class="['clickable', $style.sideMenuCollapseButton]"
-			@click="toggleCollapse"
-		>
-			<n8n-icon v-if="isCollapsed" icon="chevron-right" size="xsmall" class="ml-5xs" />
-			<n8n-icon v-else icon="chevron-left" size="xsmall" class="mr-5xs" />
-		</div>
 		<n8n-menu :items="mainMenuItems" :collapsed="isCollapsed" @select="handleSelect">
 			<template #header>
 				<div :class="$style.logo">
@@ -28,10 +20,9 @@
 					v-if="fullyExpanded && userIsTrialing"
 					:cloud-plan-data="currentPlanAndUsageData"
 			/></template>
-			<template #menuSuffix>
+			<template v-if="disableMenusInWF" #menuSuffix>
 				<div>
 					<div
-						v-if="hasVersionUpdates"
 						data-test-id="version-updates-panel-button"
 						:class="$style.updates"
 						@click="openUpdatesPanel"
@@ -51,7 +42,7 @@
 					<MainSidebarSourceControl :is-collapsed="isCollapsed" />
 				</div>
 			</template>
-			<template v-if="showUserArea" #footer>
+			<template v-if="disableMenusInWF" #footer>
 				<div :class="$style.userArea">
 					<div class="ml-3xs" data-test-id="main-sidebar-user-menu">
 						<!-- This dropdown is only enabled when sidebar is collapsed -->
@@ -150,6 +141,7 @@ export default defineComponent({
 		return {
 			basePath: '',
 			fullyExpanded: false,
+			disableMenusInWF: false
 		};
 	},
 	computed: {
@@ -178,14 +170,14 @@ export default defineComponent({
 			return this.versionsStore.nextVersions;
 		},
 		isCollapsed(): boolean {
-			return this.uiStore.sidebarMenuCollapsed;
+			return true;
 		},
 		canUserAccessSettings(): boolean {
 			const accessibleRoute = this.findFirstAccessibleSettingsRoute();
 			return accessibleRoute !== null;
 		},
 		showUserArea(): boolean {
-			return hasPermission(['authenticated']);
+			return false;
 		},
 		workflowExecution(): IExecutionResponse | null {
 			return this.workflowsStore.getWorkflowExecution;
@@ -225,43 +217,12 @@ export default defineComponent({
 			const regularItems: IMenuItem[] = [
 				workflows,
 				{
-					// Link to in-app templates, available if custom templates are enabled
-					id: 'templates',
-					icon: 'box-open',
-					label: this.$locale.baseText('mainSidebar.templates'),
-					position: 'top',
-					available:
-						this.settingsStore.isTemplatesEnabled && this.templatesStore.hasCustomTemplatesHost,
-					route: { to: { name: VIEWS.TEMPLATES } },
-				},
-				{
-					// Link to website templates, available if custom templates are not enabled
-					id: 'templates',
-					icon: 'box-open',
-					label: this.$locale.baseText('mainSidebar.templates'),
-					position: 'top',
-					available:
-						this.settingsStore.isTemplatesEnabled && !this.templatesStore.hasCustomTemplatesHost,
-					link: {
-						href: this.templatesStore.websiteTemplateRepositoryURL,
-						target: '_blank',
-					},
-				},
-				{
 					id: 'credentials',
 					icon: 'key',
 					label: this.$locale.baseText('mainSidebar.credentials'),
 					customIconSize: 'medium',
 					position: 'top',
 					route: { to: { name: VIEWS.CREDENTIALS } },
-				},
-				{
-					id: 'variables',
-					icon: 'variable',
-					label: this.$locale.baseText('mainSidebar.variables'),
-					customIconSize: 'medium',
-					position: 'top',
-					route: { to: { name: VIEWS.VARIABLES } },
 				},
 				{
 					id: 'executions',
@@ -276,66 +237,7 @@ export default defineComponent({
 					label: 'Admin Panel',
 					icon: 'home',
 					available: this.settingsStore.isCloudDeployment && hasPermission(['instanceOwner']),
-				},
-				{
-					id: 'settings',
-					icon: 'cog',
-					label: this.$locale.baseText('settings'),
-					position: 'bottom',
-					available: this.canUserAccessSettings && this.usersStore.currentUser !== null,
-					activateOnRouteNames: [VIEWS.USERS_SETTINGS, VIEWS.API_SETTINGS, VIEWS.PERSONAL_SETTINGS],
-					route: { to: defaultSettingsRoute },
-				},
-				{
-					id: 'help',
-					icon: 'question',
-					label: 'Help',
-					position: 'bottom',
-					children: [
-						{
-							id: 'quickstart',
-							icon: 'video',
-							label: this.$locale.baseText('mainSidebar.helpMenuItems.quickstart'),
-							link: {
-								href: 'https://www.youtube.com/watch?v=1MwSoB0gnM4',
-								target: '_blank',
-							},
-						},
-						{
-							id: 'docs',
-							icon: 'book',
-							label: this.$locale.baseText('mainSidebar.helpMenuItems.documentation'),
-							link: {
-								href: 'https://docs.n8n.io?utm_source=n8n_app&utm_medium=app_sidebar',
-								target: '_blank',
-							},
-						},
-						{
-							id: 'forum',
-							icon: 'users',
-							label: this.$locale.baseText('mainSidebar.helpMenuItems.forum'),
-							link: {
-								href: 'https://community.n8n.io?utm_source=n8n_app&utm_medium=app_sidebar',
-								target: '_blank',
-							},
-						},
-						{
-							id: 'examples',
-							icon: 'graduation-cap',
-							label: this.$locale.baseText('mainSidebar.helpMenuItems.course'),
-							link: {
-								href: 'https://www.youtube.com/watch?v=1MwSoB0gnM4',
-								target: '_blank',
-							},
-						},
-						{
-							id: 'about',
-							icon: 'info',
-							label: this.$locale.baseText('mainSidebar.aboutN8n'),
-							position: 'bottom',
-						},
-					],
-				},
+				}
 			];
 			return [...items, ...regularItems];
 		},
