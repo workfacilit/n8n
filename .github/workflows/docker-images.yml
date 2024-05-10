@@ -38,7 +38,7 @@ jobs:
           provenance: false
           push: true
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/n8n:1${{ steps.vars.outputs.tag }}
-            ${{ secrets.DOCKER_USERNAME }}/n8n:2latest
-            ${{ secrets.DOCKER_USERNAME }}/n8n:3a-${{ github.ref_slug }}
-            ${{ secrets.DOCKER_USERNAME }}/n8n:4latest-${{ github.ref_slug }}
+            ${{ secrets.DOCKER_USERNAME }}/n8n:${{ steps.vars.outputs.tag }}
+            ${{ secrets.DOCKER_USERNAME }}/n8n:latest
+            ${{ secrets.DOCKER_USERNAME }}/n8n:a-${{ steps.vars.outputs.tag }}
+            ${{ secrets.DOCKER_USERNAME }}/n8n:latest-${{ steps.vars.outputs.tag }}
