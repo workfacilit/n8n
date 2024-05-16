@@ -537,7 +537,7 @@
 	"duplicateWorkflowDialog.errors.generic.title": "Duplicate workflow failed",
 	"error": "Error",
 	"error.goBack": "Go back",
-	"error.pageNotFound": "Oops, couldn’t find that it!!",
+	"error.pageNotFound": "Oops, couldn’t find that it!",
 	"executions.ExecutionStatus": "Execution status",
 	"executionDetails.confirmMessage.confirmButtonText": "Yes, delete",
 	"executionDetails.confirmMessage.headline": "Delete Execution?",
