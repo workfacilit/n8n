@@ -8,9 +8,6 @@ WORKDIR /src
 COPY . /src
 RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store --mount=type=cache,id=pnpm-metadata,target=/root/.cache/pnpm/metadata pnpm install --frozen-lockfile
 
-# Install custom n8n node
-RUN pnpm install n8n-nodes-generate-report
-
 RUN pnpm build
 
 # Delete all dev dependencies
@@ -35,11 +32,20 @@ WORKDIR /home/node
 COPY --from=builder /compiled /usr/local/lib/node_modules/n8n
 COPY docker/images/n8n/docker-entrypoint.sh /
 
+# Install LibreOffice
+RUN apt-get update && \
+    apt-get install -y libreoffice && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
 RUN \
 	pnpm rebuild --dir /usr/local/lib/node_modules/n8n sqlite3 && \
 	ln -s /usr/local/lib/node_modules/n8n/bin/n8n /usr/local/bin/n8n && \
 	mkdir .n8n && \
 	chown node:node .n8n
+
+# Install community nodes
+RUN n8n-node-dev install n8n-nodes-generate-report
 
 ENV SHELL /bin/sh
 USER node
