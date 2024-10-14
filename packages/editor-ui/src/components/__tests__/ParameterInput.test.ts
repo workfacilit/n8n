@@ -4,15 +4,24 @@ import type { useNDVStore } from '@/stores/ndv.store';
 import type { CompletionResult } from '@codemirror/autocomplete';
 import { createTestingPinia } from '@pinia/testing';
 import { faker } from '@faker-js/faker';
-
-let mockNdvState: Partial<ReturnType<typeof useNDVStore>>;
-let mockCompletionResult: Partial<CompletionResult>;
 import { waitFor } from '@testing-library/vue';
 import userEvent from '@testing-library/user-event';
+import type { useNodeTypesStore } from '../../stores/nodeTypes.store';
+import { cleanupAppModals, createAppModals } from '@/__tests__/utils';
+
+let mockNdvState: Partial<ReturnType<typeof useNDVStore>>;
+let mockNodeTypesState: Partial<ReturnType<typeof useNodeTypesStore>>;
+let mockCompletionResult: Partial<CompletionResult>;
 
 vi.mock('@/stores/ndv.store', () => {
 	return {
 		useNDVStore: vi.fn(() => mockNdvState),
+	};
+});
+
+vi.mock('@/stores/nodeTypes.store', () => {
+	return {
+		useNodeTypesStore: vi.fn(() => mockNodeTypesState),
 	};
 });
 
@@ -28,6 +37,7 @@ vi.mock('vue-router', () => {
 		useRouter: () => ({
 			push,
 		}),
+		useRoute: () => ({}),
 		RouterLink: vi.fn(),
 	};
 });
@@ -44,7 +54,16 @@ describe('ParameterInput.vue', () => {
 				type: 'test',
 				typeVersion: 1,
 			},
+			isNDVDataEmpty: vi.fn(() => false),
 		};
+		mockNodeTypesState = {
+			allNodeTypes: [],
+		};
+		createAppModals();
+	});
+
+	afterEach(() => {
+		cleanupAppModals();
 	});
 
 	test('should render an options parameter (select)', async () => {
@@ -120,5 +139,76 @@ describe('ParameterInput.vue', () => {
 		await userEvent.type(input, 'foo');
 
 		expect(emitted('update')).toContainEqual([expect.objectContaining({ value: 'foo' })]);
+	});
+
+	test('should not reset the value of a multi-select with loadOptionsMethod on load', async () => {
+		mockNodeTypesState.getNodeParameterOptions = vi.fn(async () => [
+			{ name: 'ID', value: 'id' },
+			{ name: 'Title', value: 'title' },
+			{ name: 'Description', value: 'description' },
+		]);
+
+		const { emitted, container } = renderComponent(ParameterInput, {
+			pinia: createTestingPinia(),
+			props: {
+				path: 'columns',
+				parameter: {
+					displayName: 'Columns',
+					name: 'columns',
+					type: 'multiOptions',
+					typeOptions: { loadOptionsMethod: 'getColumnsMultiOptions' },
+				},
+				modelValue: ['id', 'title'],
+			},
+		});
+
+		const input = container.querySelector('input') as HTMLInputElement;
+		expect(input).toBeInTheDocument();
+
+		// Nothing should be emitted
+		expect(emitted('update')).toBeUndefined();
+	});
+
+	test('should show message when can not load options without credentials', async () => {
+		mockNodeTypesState.getNodeParameterOptions = vi.fn(async () => {
+			throw new Error('Node does not have any credentials set');
+		});
+
+		// @ts-expect-error Readonly property
+		mockNodeTypesState.getNodeType = vi.fn().mockReturnValue({
+			displayName: 'Test',
+			credentials: [
+				{
+					name: 'openAiApi',
+					required: true,
+				},
+			],
+		});
+
+		const { emitted, container, getByTestId } = renderComponent(ParameterInput, {
+			pinia: createTestingPinia(),
+			props: {
+				path: 'columns',
+				parameter: {
+					displayName: 'Columns',
+					name: 'columns',
+					type: 'options',
+					typeOptions: { loadOptionsMethod: 'getColumnsMultiOptions' },
+				},
+				modelValue: 'id',
+			},
+		});
+
+		await waitFor(() => expect(getByTestId('parameter-input-field')).toBeInTheDocument());
+
+		const input = container.querySelector('input') as HTMLInputElement;
+		expect(input).toBeInTheDocument();
+
+		expect(mockNodeTypesState.getNodeParameterOptions).toHaveBeenCalled();
+
+		expect(input.value.toLowerCase()).not.toContain('error');
+		expect(input).toHaveValue('Set up credential to see options');
+
+		expect(emitted('update')).toBeUndefined();
 	});
 });

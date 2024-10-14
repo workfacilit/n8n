@@ -1,33 +1,33 @@
-import express from 'express';
 import { validate } from 'class-validator';
+import express from 'express';
+import querystring from 'querystring';
 import type { PostBindingContext } from 'samlify/types/src/entity';
 import url from 'url';
 
-import { Get, Post, RestController, GlobalScope } from '@/decorators';
 import { AuthService } from '@/auth/auth.service';
-import { AuthenticatedRequest } from '@/requests';
-import { InternalHooks } from '@/InternalHooks';
-import querystring from 'querystring';
-import { BadRequestError } from '@/errors/response-errors/bad-request.error';
+import { Get, Post, RestController, GlobalScope } from '@/decorators';
 import { AuthError } from '@/errors/response-errors/auth.error';
+import { BadRequestError } from '@/errors/response-errors/bad-request.error';
+import { EventService } from '@/events/event.service';
+import { AuthenticatedRequest } from '@/requests';
 import { UrlService } from '@/services/url.service';
 
+import {
+	samlLicensedAndEnabledMiddleware,
+	samlLicensedMiddleware,
+} from '../middleware/saml-enabled-middleware';
+import { isConnectionTestRequest, isSamlLicensedAndEnabled } from '../saml-helpers';
+import { SamlService } from '../saml.service.ee';
 import {
 	getServiceProviderConfigTestReturnUrl,
 	getServiceProviderEntityId,
 	getServiceProviderReturnUrl,
-} from '../serviceProvider.ee';
-import { getSamlConnectionTestSuccessView } from '../views/samlConnectionTestSuccess';
-import { getSamlConnectionTestFailedView } from '../views/samlConnectionTestFailed';
-import { isConnectionTestRequest, isSamlLicensedAndEnabled } from '../samlHelpers';
+} from '../service-provider.ee';
 import type { SamlLoginBinding } from '../types';
-import {
-	samlLicensedAndEnabledMiddleware,
-	samlLicensedMiddleware,
-} from '../middleware/samlEnabledMiddleware';
-import { SamlService } from '../saml.service.ee';
 import { SamlConfiguration } from '../types/requests';
-import { getInitSSOFormView } from '../views/initSsoPost';
+import { getInitSSOFormView } from '../views/init-sso-post';
+import { getSamlConnectionTestFailedView } from '../views/saml-connection-test-failed';
+import { getSamlConnectionTestSuccessView } from '../views/saml-connection-test-success';
 
 @RestController('/sso/saml')
 export class SamlController {
@@ -35,7 +35,7 @@ export class SamlController {
 		private readonly authService: AuthService,
 		private readonly samlService: SamlService,
 		private readonly urlService: UrlService,
-		private readonly internalHooks: InternalHooks,
+		private readonly eventService: EventService,
 	) {}
 
 	@Get('/metadata', { skipAuth: true })
@@ -126,10 +126,11 @@ export class SamlController {
 				}
 			}
 			if (loginResult.authenticatedUser) {
-				void this.internalHooks.onUserLoginSuccess({
+				this.eventService.emit('user-logged-in', {
 					user: loginResult.authenticatedUser,
 					authenticationMethod: 'saml',
 				});
+
 				// Only sign in user if SAML is enabled, otherwise treat as test connection
 				if (isSamlLicensedAndEnabled()) {
 					this.authService.issueCookie(res, loginResult.authenticatedUser, req.browserId);
@@ -143,8 +144,8 @@ export class SamlController {
 					return res.status(202).send(loginResult.attributes);
 				}
 			}
-			void this.internalHooks.onUserLoginFailed({
-				user: loginResult.attributes.email ?? 'unknown',
+			this.eventService.emit('user-login-failed', {
+				userEmail: loginResult.attributes.email ?? 'unknown',
 				authenticationMethod: 'saml',
 			});
 			throw new AuthError('SAML Authentication failed');
@@ -152,8 +153,8 @@ export class SamlController {
 			if (isConnectionTestRequest(req)) {
 				return res.send(getSamlConnectionTestFailedView((error as Error).message));
 			}
-			void this.internalHooks.onUserLoginFailed({
-				user: 'unknown',
+			this.eventService.emit('user-login-failed', {
+				userEmail: 'unknown',
 				authenticationMethod: 'saml',
 			});
 			throw new AuthError('SAML Authentication failed: ' + (error as Error).message);

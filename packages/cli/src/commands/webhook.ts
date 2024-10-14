@@ -1,15 +1,15 @@
-import { Container } from 'typedi';
 import { Flags, type Config } from '@oclif/core';
 import { ApplicationError } from 'n8n-workflow';
+import { Container } from 'typedi';
 
+import { ActiveExecutions } from '@/active-executions';
 import config from '@/config';
-import { ActiveExecutions } from '@/ActiveExecutions';
-import { WebhookServer } from '@/WebhookServer';
-import { Queue } from '@/Queue';
-import { BaseCommand } from './BaseCommand';
-
+import { PubSubHandler } from '@/scaling/pubsub/pubsub-handler';
+import { Subscriber } from '@/scaling/pubsub/subscriber.service';
 import { OrchestrationWebhookService } from '@/services/orchestration/webhook/orchestration.webhook.service';
-import { OrchestrationHandlerWebhookService } from '@/services/orchestration/webhook/orchestration.handler.webhook.service';
+import { WebhookServer } from '@/webhooks/webhook-server';
+
+import { BaseCommand } from './base-command';
 
 export class Webhook extends BaseCommand {
 	static description = 'Starts n8n webhook process. Intercepts only production URLs.';
@@ -22,9 +22,10 @@ export class Webhook extends BaseCommand {
 
 	protected server = Container.get(WebhookServer);
 
+	override needsCommunityPackages = true;
+
 	constructor(argv: string[], cmdConfig: Config) {
 		super(argv, cmdConfig);
-		this.setInstanceType('webhook');
 		if (this.queueModeId) {
 			this.logger.debug(`Webhook Instance queue mode id: ${this.queueModeId}`);
 		}
@@ -81,10 +82,12 @@ export class Webhook extends BaseCommand {
 		this.logger.debug('Orchestration init complete');
 		await this.initBinaryDataService();
 		this.logger.debug('Binary data service init complete');
+		await this.initDataDeduplicationService();
+		this.logger.debug('Data deduplication service init complete');
 		await this.initExternalHooks();
 		this.logger.debug('External hooks init complete');
 		await this.initExternalSecrets();
-		this.logger.debug('External seecrets init complete');
+		this.logger.debug('External secrets init complete');
 	}
 
 	async run() {
@@ -94,7 +97,8 @@ export class Webhook extends BaseCommand {
 			);
 		}
 
-		await Container.get(Queue).init();
+		const { ScalingService } = await import('@/scaling/scaling.service');
+		await Container.get(ScalingService).setupQueue();
 		await this.server.start();
 		this.logger.debug(`Webhook listener ID: ${this.server.uniqueInstanceId}`);
 		this.logger.info('Webhook listener waiting for requests.');
@@ -109,6 +113,8 @@ export class Webhook extends BaseCommand {
 
 	async initOrchestration() {
 		await Container.get(OrchestrationWebhookService).init();
-		await Container.get(OrchestrationHandlerWebhookService).init();
+
+		Container.get(PubSubHandler).init();
+		await Container.get(Subscriber).subscribe('n8n.commands');
 	}
 }

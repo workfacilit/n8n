@@ -1,7 +1,8 @@
 import { Service } from 'typedi';
-import type { AbstractEventMessage } from '@/eventbus/EventMessageClasses/AbstractEventMessage';
-import { OrchestrationService } from '../../orchestration.service';
+
 import config from '@/config';
+
+import { OrchestrationService } from '../../orchestration.service';
 
 @Service()
 export class OrchestrationWorkerService extends OrchestrationService {
@@ -9,12 +10,7 @@ export class OrchestrationWorkerService extends OrchestrationService {
 		return (
 			this.isInitialized &&
 			config.get('executions.mode') === 'queue' &&
-			config.get('generic.instanceType') === 'worker'
+			this.instanceSettings.instanceType === 'worker'
 		);
-	}
-
-	async publishToEventLog(message: AbstractEventMessage) {
-		if (!this.sanityCheck()) return;
-		await this.redisPublisher.publishToEventLog(message);
 	}
 }

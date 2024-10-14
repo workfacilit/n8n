@@ -1,40 +1,68 @@
+import { GlobalConfig } from '@n8n/config';
+import type { AiAssistantSDK } from '@n8n_io/ai-assistant-sdk';
+import { AiAssistantClient } from '@n8n_io/ai-assistant-sdk';
+import { assert, type IUser } from 'n8n-workflow';
 import { Service } from 'typedi';
-import config from '@/config';
-import type { INodeType, N8nAIProviderType, NodeError } from 'n8n-workflow';
-import { createDebugErrorPrompt } from '@/services/ai/prompts/debugError';
-import type { BaseMessageLike } from '@langchain/core/messages';
-import { AIProviderOpenAI } from '@/services/ai/providers/openai';
-import { AIProviderUnknown } from '@/services/ai/providers/unknown';
 
-function isN8nAIProviderType(value: string): value is N8nAIProviderType {
-	return ['openai'].includes(value);
-}
+import config from '@/config';
+import type { AiAssistantRequest } from '@/requests';
+
+import { N8N_VERSION } from '../constants';
+import { License } from '../license';
 
 @Service()
-export class AIService {
-	private provider: N8nAIProviderType = 'unknown';
+export class AiService {
+	private client: AiAssistantClient | undefined;
 
-	public model: AIProviderOpenAI | AIProviderUnknown = new AIProviderUnknown();
+	constructor(
+		private readonly licenseService: License,
+		private readonly globalConfig: GlobalConfig,
+	) {}
 
-	constructor() {
-		const providerName = config.getEnv('ai.provider');
-		if (isN8nAIProviderType(providerName)) {
-			this.provider = providerName;
+	async init() {
+		const aiAssistantEnabled = this.licenseService.isAiAssistantEnabled();
+		if (!aiAssistantEnabled) {
+			return;
 		}
 
-		if (this.provider === 'openai') {
-			const apiKey = config.getEnv('ai.openAIApiKey');
-			if (apiKey) {
-				this.model = new AIProviderOpenAI({ apiKey });
-			}
+		const licenseCert = await this.licenseService.loadCertStr();
+		const consumerId = this.licenseService.getConsumerId();
+		const baseUrl = config.get('aiAssistant.baseUrl');
+		const logLevel = this.globalConfig.logging.level;
+
+		this.client = new AiAssistantClient({
+			licenseCert,
+			consumerId,
+			n8nVersion: N8N_VERSION,
+			baseUrl,
+			logLevel,
+		});
+	}
+
+	async chat(payload: AiAssistantSDK.ChatRequestPayload, user: IUser) {
+		if (!this.client) {
+			await this.init();
 		}
+		assert(this.client, 'Assistant client not setup');
+
+		return await this.client.chat(payload, { id: user.id });
 	}
 
-	async prompt(messages: BaseMessageLike[]) {
-		return await this.model.prompt(messages);
+	async applySuggestion(payload: AiAssistantRequest.SuggestionPayload, user: IUser) {
+		if (!this.client) {
+			await this.init();
+		}
+		assert(this.client, 'Assistant client not setup');
+
+		return await this.client.applySuggestion(payload, { id: user.id });
 	}
 
-	async debugError(error: NodeError, nodeType?: INodeType) {
-		return await this.prompt(createDebugErrorPrompt(error, nodeType));
+	async askAi(payload: AiAssistantSDK.AskAiRequestPayload, user: IUser) {
+		if (!this.client) {
+			await this.init();
+		}
+		assert(this.client, 'Assistant client not setup');
+
+		return await this.client.askAi(payload, { id: user.id });
 	}
 }

@@ -1,3 +1,22 @@
+<script setup lang="ts">
+import { computed } from 'vue';
+import type { XYPosition } from '@/Interface';
+import { useNodeCreatorStore } from '@/stores/nodeCreator.store';
+
+export interface Props {
+	showTooltip: boolean;
+	position: XYPosition;
+}
+
+const props = defineProps<Props>();
+
+const nodeCreatorStore = useNodeCreatorStore();
+const containerCssVars = computed(() => ({
+	'--trigger-placeholder-left-position': `${props.position[0]}px`,
+	'--trigger-placeholder-top-position': `${props.position[1]}px`,
+}));
+</script>
+
 <template>
 	<div
 		ref="container"
@@ -23,25 +42,6 @@
 	</div>
 </template>
 
-<script setup lang="ts">
-import { computed } from 'vue';
-import type { XYPosition } from '@/Interface';
-import { useNodeCreatorStore } from '@/stores/nodeCreator.store';
-
-export interface Props {
-	showTooltip: boolean;
-	position: XYPosition;
-}
-
-const props = defineProps<Props>();
-
-const nodeCreatorStore = useNodeCreatorStore();
-const containerCssVars = computed(() => ({
-	'--trigger-placeholder-left-position': `${props.position[0]}px`,
-	'--trigger-placeholder-top-position': `${props.position[1]}px`,
-}));
-</script>
-
 <style lang="scss" module>
 .canvasAddButton {
 	display: flex;
@@ -54,7 +54,7 @@ const containerCssVars = computed(() => ({
 	top: var(--trigger-placeholder-top-position);
 	left: var(--trigger-placeholder-left-position);
 	// We have to increase z-index to make sure it's higher than selecting box in NodeView
-	// otherwise the clics wouldn't register
+	// otherwise the clicks wouldn't register
 	z-index: 101;
 
 	&:hover .button svg path {

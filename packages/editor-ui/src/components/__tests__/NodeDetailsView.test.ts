@@ -1,24 +1,24 @@
+import { createPinia, setActivePinia } from 'pinia';
+import { waitFor } from '@testing-library/vue';
+import { mock } from 'vitest-mock-extended';
+
 import NodeDetailsView from '@/components/NodeDetailsView.vue';
 import { VIEWS } from '@/constants';
-import { createComponentRenderer } from '@/__tests__/render';
-import { waitFor } from '@testing-library/vue';
-import { uuid } from '@jsplumb/util';
-import type { INode } from 'n8n-workflow';
-import { createTestNode, createTestWorkflow } from '@/__tests__/mocks';
+import type { IWorkflowDb } from '@/Interface';
 import { useSettingsStore } from '@/stores/settings.store';
 import { useUsersStore } from '@/stores/users.store';
 import { useNDVStore } from '@/stores/ndv.store';
 import { useNodeTypesStore } from '@/stores/nodeTypes.store';
 import { useWorkflowsStore } from '@/stores/workflows.store';
-import { createPinia, setActivePinia } from 'pinia';
-import { defaultMockNodeTypesArray } from '@/__tests__/defaults';
-import { setupServer } from '@/__tests__/server';
 
-async function createPiniaWithActiveNode(node: INode) {
-	const workflowId = uuid();
-	const workflow = createTestWorkflow({
-		id: workflowId,
-		name: 'Test Workflow',
+import { createComponentRenderer } from '@/__tests__/render';
+import { setupServer } from '@/__tests__/server';
+import { defaultNodeDescriptions, mockNodes } from '@/__tests__/mocks';
+import { cleanupAppModals, createAppModals } from '@/__tests__/utils';
+
+async function createPiniaWithActiveNode() {
+	const node = mockNodes[0];
+	const workflow = mock<IWorkflowDb>({
 		connections: {},
 		active: true,
 		nodes: [node],
@@ -31,29 +31,16 @@ async function createPiniaWithActiveNode(node: INode) {
 	const nodeTypesStore = useNodeTypesStore();
 	const ndvStore = useNDVStore();
 
-	nodeTypesStore.setNodeTypes(defaultMockNodeTypesArray);
+	nodeTypesStore.setNodeTypes(defaultNodeDescriptions);
 	workflowsStore.workflow = workflow;
+	workflowsStore.nodeMetadata[node.name] = { pristine: true };
 	ndvStore.activeNodeName = node.name;
 
 	await useSettingsStore().getSettings();
 	await useUsersStore().loginWithCookie();
 
-	return pinia;
+	return { pinia, currentWorkflow: workflowsStore.getCurrentWorkflow() };
 }
-
-const renderComponent = createComponentRenderer(NodeDetailsView, {
-	props: {
-		teleported: false,
-		appendToBody: false,
-	},
-	global: {
-		mocks: {
-			$route: {
-				name: VIEWS.WORKFLOW,
-			},
-		},
-	},
-});
 
 describe('NodeDetailsView', () => {
 	let server: ReturnType<typeof setupServer>;
@@ -62,7 +49,12 @@ describe('NodeDetailsView', () => {
 		server = setupServer();
 	});
 
+	beforeEach(() => {
+		createAppModals();
+	});
+
 	afterEach(() => {
+		cleanupAppModals();
 		vi.clearAllMocks();
 	});
 
@@ -71,17 +63,27 @@ describe('NodeDetailsView', () => {
 	});
 
 	it('should render correctly', async () => {
-		const wrapper = renderComponent({
-			pinia: await createPiniaWithActiveNode(
-				createTestNode({
-					name: 'Manual Trigger',
-					type: 'manualTrigger',
-				}),
-			),
+		const { pinia, currentWorkflow } = await createPiniaWithActiveNode();
+
+		const renderComponent = createComponentRenderer(NodeDetailsView, {
+			props: {
+				teleported: false,
+				appendToBody: false,
+				workflowObject: currentWorkflow,
+			},
+			global: {
+				mocks: {
+					$route: {
+						name: VIEWS.WORKFLOW,
+					},
+				},
+			},
 		});
 
-		await waitFor(() =>
-			expect(wrapper.container.querySelector('.ndv-wrapper')).toBeInTheDocument(),
-		);
+		const { getByTestId } = renderComponent({
+			pinia,
+		});
+
+		await waitFor(() => expect(getByTestId('ndv')).toBeInTheDocument());
 	});
 });

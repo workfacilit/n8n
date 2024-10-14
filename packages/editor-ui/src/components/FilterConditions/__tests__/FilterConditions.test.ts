@@ -1,12 +1,13 @@
 import { createComponentRenderer } from '@/__tests__/render';
-import { SETTINGS_STORE_DEFAULT_STATE } from '@/__tests__/utils';
+import { cleanupAppModals, createAppModals, SETTINGS_STORE_DEFAULT_STATE } from '@/__tests__/utils';
 import FilterConditions from '@/components/FilterConditions/FilterConditions.vue';
 import { STORES } from '@/constants';
 import { useNDVStore } from '@/stores/ndv.store';
 import { createTestingPinia } from '@pinia/testing';
 import userEvent from '@testing-library/user-event';
-import { within } from '@testing-library/vue';
+import { within, waitFor } from '@testing-library/vue';
 import { getFilterOperator } from '../utils';
+import { get } from 'lodash-es';
 
 const DEFAULT_SETUP = {
 	pinia: createTestingPinia({
@@ -34,8 +35,13 @@ const DEFAULT_SETUP = {
 const renderComponent = createComponentRenderer(FilterConditions, DEFAULT_SETUP);
 
 describe('FilterConditions.vue', () => {
+	beforeEach(() => {
+		createAppModals();
+	});
+
 	afterEach(() => {
 		vi.clearAllMocks();
+		cleanupAppModals();
 	});
 
 	it('renders default state properly', async () => {
@@ -272,6 +278,68 @@ describe('FilterConditions.vue', () => {
 		conditions = await findAllByTestId('filter-condition');
 		expect(conditions.length).toEqual(1);
 		expect(conditions[0].querySelector('[data-test-id="filter-remove-condition"]')).toBeNull();
+	});
+
+	it('can edit conditions', async () => {
+		const { getByTestId, emitted } = renderComponent({
+			...DEFAULT_SETUP,
+			props: {
+				...DEFAULT_SETUP.props,
+				value: {
+					options: {
+						caseSensitive: true,
+						leftValue: '',
+					},
+					conditions: [
+						{
+							leftValue: '={{ $json.name }}',
+							rightValue: 'John',
+							operator: getFilterOperator('string:equals'),
+						},
+					],
+				},
+			},
+		});
+
+		const condition = getByTestId('filter-condition');
+		await waitFor(() =>
+			expect(within(condition).getByTestId('filter-condition-left')).toHaveTextContent(
+				'{{ $json.name }}',
+			),
+		);
+
+		expect(emitted('valueChanged')).toBeUndefined();
+
+		const expressionEditor = within(condition)
+			.getByTestId('filter-condition-left')
+			.querySelector('.cm-line');
+
+		if (expressionEditor) {
+			await userEvent.type(expressionEditor, 'test');
+		}
+
+		await waitFor(() => {
+			expect(get(emitted('valueChanged')[0], '0.value.conditions.0.leftValue')).toEqual(
+				expect.stringContaining('test'),
+			);
+		});
+
+		const parameterInput = within(condition)
+			.getByTestId('filter-condition-right')
+			.querySelector('input');
+
+		if (parameterInput) {
+			await userEvent.type(parameterInput, 'test');
+		}
+
+		await waitFor(() => {
+			expect(get(emitted('valueChanged')[0], '0.value.conditions.0.leftValue')).toEqual(
+				expect.stringContaining('test'),
+			);
+			expect(get(emitted('valueChanged')[0], '0.value.conditions.0.rightValue')).toEqual(
+				expect.stringContaining('test'),
+			);
+		});
 	});
 
 	it('renders correctly in read only mode', async () => {

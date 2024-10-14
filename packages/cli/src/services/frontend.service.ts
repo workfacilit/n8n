@@ -1,44 +1,43 @@
-import { Container, Service } from 'typedi';
-import uniq from 'lodash/uniq';
+import type { FrontendSettings, ITelemetrySettings } from '@n8n/api-types';
+import { GlobalConfig } from '@n8n/config';
 import { createWriteStream } from 'fs';
 import { mkdir } from 'fs/promises';
-import path from 'path';
-
-import type {
-	ICredentialType,
-	IN8nUISettings,
-	INodeTypeBaseDescription,
-	ITelemetrySettings,
-} from 'n8n-workflow';
+import uniq from 'lodash/uniq';
 import { InstanceSettings } from 'n8n-core';
+import type { ICredentialType, INodeTypeBaseDescription } from 'n8n-workflow';
+import fs from 'node:fs';
+import path from 'path';
+import { Container, Service } from 'typedi';
 
 import config from '@/config';
-import { LICENSE_FEATURES } from '@/constants';
-import { CredentialsOverwrites } from '@/CredentialsOverwrites';
-import { CredentialTypes } from '@/CredentialTypes';
-import { LoadNodesAndCredentials } from '@/LoadNodesAndCredentials';
-import { License } from '@/License';
-import { getCurrentAuthenticationMethod } from '@/sso/ssoHelpers';
-import { getLdapLoginLabel } from '@/Ldap/helpers';
-import { getSamlLoginLabel } from '@/sso/saml/samlHelpers';
-import { getVariablesLimit } from '@/environments/variables/environmentHelpers';
+import { LICENSE_FEATURES, N8N_VERSION } from '@/constants';
+import { CredentialTypes } from '@/credential-types';
+import { CredentialsOverwrites } from '@/credentials-overwrites';
+import { getVariablesLimit } from '@/environments/variables/environment-helpers';
+import { getLdapLoginLabel } from '@/ldap/helpers.ee';
+import { License } from '@/license';
+import { LoadNodesAndCredentials } from '@/load-nodes-and-credentials';
+import { Logger } from '@/logging/logger.service';
+import { isApiEnabled } from '@/public-api';
+import type { CommunityPackagesService } from '@/services/community-packages.service';
+import { getSamlLoginLabel } from '@/sso/saml/saml-helpers';
+import { getCurrentAuthenticationMethod } from '@/sso/sso-helpers';
+import { UserManagementMailer } from '@/user-management/email';
 import {
 	getWorkflowHistoryLicensePruneTime,
 	getWorkflowHistoryPruneTime,
-} from '@/workflows/workflowHistory/workflowHistoryHelper.ee';
-import { UserManagementMailer } from '@/UserManagement/email';
-import type { CommunityPackagesService } from '@/services/communityPackages.service';
-import { Logger } from '@/Logger';
+} from '@/workflows/workflow-history/workflow-history-helper.ee';
+
 import { UrlService } from './url.service';
-import { InternalHooks } from '@/InternalHooks';
 
 @Service()
 export class FrontendService {
-	settings: IN8nUISettings;
+	settings: FrontendSettings;
 
 	private communityPackagesService?: CommunityPackagesService;
 
 	constructor(
+		private readonly globalConfig: GlobalConfig,
 		private readonly logger: Logger,
 		private readonly loadNodesAndCredentials: LoadNodesAndCredentials,
 		private readonly credentialTypes: CredentialTypes,
@@ -47,16 +46,14 @@ export class FrontendService {
 		private readonly mailer: UserManagementMailer,
 		private readonly instanceSettings: InstanceSettings,
 		private readonly urlService: UrlService,
-		private readonly internalHooks: InternalHooks,
 	) {
 		loadNodesAndCredentials.addPostProcessor(async () => await this.generateTypes());
 		void this.generateTypes();
 
 		this.initSettings();
 
-		if (config.getEnv('nodes.communityPackages.enabled')) {
-			// eslint-disable-next-line @typescript-eslint/naming-convention
-			void import('@/services/communityPackages.service').then(({ CommunityPackagesService }) => {
+		if (this.globalConfig.nodes.communityPackages.enabled) {
+			void import('@/services/community-packages.service').then(({ CommunityPackagesService }) => {
 				this.communityPackagesService = Container.get(CommunityPackagesService);
 			});
 		}
@@ -64,7 +61,7 @@ export class FrontendService {
 
 	private initSettings() {
 		const instanceBaseUrl = this.urlService.getInstanceBaseUrl();
-		const restEndpoint = config.getEnv('endpoints.rest');
+		const restEndpoint = this.globalConfig.endpoints.rest;
 
 		const telemetrySettings: ITelemetrySettings = {
 			enabled: config.getEnv('diagnostics.enabled'),
@@ -83,23 +80,29 @@ export class FrontendService {
 		}
 
 		this.settings = {
+			isDocker: this.isDocker(),
+			databaseType: this.globalConfig.database.type,
 			previewMode: process.env.N8N_PREVIEW_MODE === 'true',
-			endpointForm: config.getEnv('endpoints.form'),
-			endpointFormTest: config.getEnv('endpoints.formTest'),
-			endpointFormWaiting: config.getEnv('endpoints.formWaiting'),
-			endpointWebhook: config.getEnv('endpoints.webhook'),
-			endpointWebhookTest: config.getEnv('endpoints.webhookTest'),
+			endpointForm: this.globalConfig.endpoints.form,
+			endpointFormTest: this.globalConfig.endpoints.formTest,
+			endpointFormWaiting: this.globalConfig.endpoints.formWaiting,
+			endpointWebhook: this.globalConfig.endpoints.webhook,
+			endpointWebhookTest: this.globalConfig.endpoints.webhookTest,
+			endpointWebhookWaiting: this.globalConfig.endpoints.webhookWaiting,
 			saveDataErrorExecution: config.getEnv('executions.saveDataOnError'),
 			saveDataSuccessExecution: config.getEnv('executions.saveDataOnSuccess'),
 			saveManualExecutions: config.getEnv('executions.saveDataManualExecutions'),
+			saveExecutionProgress: config.getEnv('executions.saveExecutionProgress'),
 			executionTimeout: config.getEnv('executions.timeout'),
 			maxExecutionTimeout: config.getEnv('executions.maxTimeout'),
-			workflowCallerPolicyDefaultOption: config.getEnv('workflows.callerPolicyDefaultOption'),
+			workflowCallerPolicyDefaultOption: this.globalConfig.workflows.callerPolicyDefaultOption,
 			timezone: config.getEnv('generic.timezone'),
 			urlBaseWebhook: this.urlService.getWebhookBaseUrl(),
 			urlBaseEditor: instanceBaseUrl,
 			binaryDataMode: config.getEnv('binaryDataManager.mode'),
-			versionCli: '',
+			nodeJsVersion: process.version.replace(/^v/, ''),
+			versionCli: N8N_VERSION,
+			concurrency: config.getEnv('executions.concurrency.productionLimit'),
 			authCookie: {
 				secure: config.getEnv('secure_cookie'),
 			},
@@ -109,9 +112,9 @@ export class FrontendService {
 				oauth2: `${instanceBaseUrl}/${restEndpoint}/oauth2-credential/callback`,
 			},
 			versionNotifications: {
-				enabled: config.getEnv('versionNotifications.enabled'),
-				endpoint: config.getEnv('versionNotifications.endpoint'),
-				infoUrl: config.getEnv('versionNotifications.infoUrl'),
+				enabled: this.globalConfig.versionNotifications.enabled,
+				endpoint: this.globalConfig.versionNotifications.endpoint,
+				infoUrl: this.globalConfig.versionNotifications.infoUrl,
 			},
 			instanceId: this.instanceSettings.instanceId,
 			telemetry: telemetrySettings,
@@ -121,7 +124,7 @@ export class FrontendService {
 				apiKey: config.getEnv('diagnostics.config.posthog.apiKey'),
 				autocapture: false,
 				disableSessionRecording: config.getEnv('deployment.type') !== 'cloud',
-				debug: config.getEnv('logs.level') === 'debug',
+				debug: this.globalConfig.logging.level === 'debug',
 			},
 			personalizationSurveyEnabled:
 				config.getEnv('personalization.enabled') && config.getEnv('diagnostics.enabled'),
@@ -143,28 +146,29 @@ export class FrontendService {
 				},
 			},
 			publicApi: {
-				enabled: !config.get('publicApi.disabled') && !this.license.isAPIDisabled(),
+				enabled: isApiEnabled(),
 				latestVersion: 1,
-				path: config.getEnv('publicApi.path'),
+				path: this.globalConfig.publicApi.path,
 				swaggerUi: {
-					enabled: !config.getEnv('publicApi.swaggerUi.disabled'),
+					enabled: !this.globalConfig.publicApi.swaggerUiDisabled,
 				},
 			},
 			workflowTagsDisabled: config.getEnv('workflowTagsDisabled'),
-			logLevel: config.getEnv('logs.level'),
+			logLevel: this.globalConfig.logging.level,
 			hiringBannerEnabled: config.getEnv('hiringBanner.enabled'),
-			templates: {
-				enabled: config.getEnv('templates.enabled'),
-				host: config.getEnv('templates.host'),
+			aiAssistant: {
+				enabled: false,
 			},
-			onboardingCallPromptEnabled: config.getEnv('onboardingCallPrompt.enabled'),
+			templates: {
+				enabled: this.globalConfig.templates.enabled,
+				host: this.globalConfig.templates.host,
+			},
 			executionMode: config.getEnv('executions.mode'),
 			pushBackend: config.getEnv('push.backend'),
-			communityNodesEnabled: config.getEnv('nodes.communityPackages.enabled'),
+			communityNodesEnabled: this.globalConfig.nodes.communityPackages.enabled,
 			deployment: {
 				type: config.getEnv('deployment.type'),
 			},
-			isNpmAvailable: false,
 			allowedModules: {
 				builtIn: process.env.NODE_FUNCTION_ALLOW_BUILTIN?.split(',') ?? undefined,
 				external: process.env.NODE_FUNCTION_ALLOW_EXTERNAL?.split(',') ?? undefined,
@@ -185,12 +189,18 @@ export class FrontendService {
 				workflowHistory: false,
 				workerView: false,
 				advancedPermissions: false,
+				projects: {
+					team: {
+						limit: 0,
+					},
+				},
 			},
 			mfa: {
 				enabled: false,
 			},
 			hideUsagePage: config.getEnv('hideUsagePage'),
 			license: {
+				consumerId: 'unknown',
 				environment: config.getEnv('license.tenantId') === 1 ? 'production' : 'staging',
 			},
 			variables: {
@@ -202,14 +212,20 @@ export class FrontendService {
 			banners: {
 				dismissed: [],
 			},
-			ai: {
-				enabled: config.getEnv('ai.enabled'),
-				provider: config.getEnv('ai.provider'),
-				errorDebugging: !!config.getEnv('ai.openAIApiKey'),
+			askAi: {
+				enabled: false,
 			},
 			workflowHistory: {
 				pruneTime: -1,
 				licensePruneTime: -1,
+			},
+			pruning: {
+				isEnabled: config.getEnv('executions.pruneData'),
+				maxAge: config.getEnv('executions.pruneDataMaxAge'),
+				maxCount: config.getEnv('executions.pruneDataMaxCount'),
+			},
+			security: {
+				blockFileAccessToN8nFiles: config.getEnv('security.blockFileAccessToN8nFiles'),
 			},
 		};
 	}
@@ -225,10 +241,8 @@ export class FrontendService {
 		this.writeStaticJSON('credentials', credentials);
 	}
 
-	getSettings(pushRef?: string): IN8nUISettings {
-		void this.internalHooks.onFrontendSettingsAPI(pushRef);
-
-		const restEndpoint = config.getEnv('endpoints.rest');
+	getSettings(): FrontendSettings {
+		const restEndpoint = this.globalConfig.endpoints.rest;
 
 		// Update all urls, in case `WEBHOOK_URL` was updated by `--tunnel`
 		const instanceBaseUrl = this.urlService.getInstanceBaseUrl();
@@ -243,9 +257,7 @@ export class FrontendService {
 		Object.assign(this.settings.userManagement, {
 			quota: this.license.getUsersLimit(),
 			authenticationMethod: getCurrentAuthenticationMethod(),
-			showSetupOnFirstLoad:
-				!config.getEnv('userManagement.isInstanceOwnerSetUp') &&
-				!config.getEnv('deployment.type').startsWith('desktop_'),
+			showSetupOnFirstLoad: !config.getEnv('userManagement.isInstanceOwnerSetUp'),
 		});
 
 		let dismissedBanners: string[] = [];
@@ -261,6 +273,11 @@ export class FrontendService {
 		const isS3Selected = config.getEnv('binaryDataManager.mode') === 's3';
 		const isS3Available = config.getEnv('binaryDataManager.availableModes').includes('s3');
 		const isS3Licensed = this.license.isBinaryDataS3Licensed();
+		const isAiAssistantEnabled = this.license.isAiAssistantEnabled();
+		const isAskAiEnabled = this.license.isAskAiEnabled();
+
+		this.settings.license.planName = this.license.getPlanName();
+		this.settings.license.consumerId = this.license.getConsumerId();
 
 		// refresh enterprise status
 		Object.assign(this.settings.enterprise, {
@@ -310,17 +327,23 @@ export class FrontendService {
 			this.settings.missingPackages = this.communityPackagesService.hasMissingPackages;
 		}
 
+		if (isAiAssistantEnabled) {
+			this.settings.aiAssistant.enabled = isAiAssistantEnabled;
+		}
+
+		if (isAskAiEnabled) {
+			this.settings.askAi.enabled = isAskAiEnabled;
+		}
+
 		this.settings.mfa.enabled = config.get('mfa.enabled');
 
 		this.settings.executionMode = config.getEnv('executions.mode');
 
 		this.settings.binaryDataMode = config.getEnv('binaryDataManager.mode');
 
-		return this.settings;
-	}
+		this.settings.enterprise.projects.team.limit = this.license.getTeamProjectLimit();
 
-	addToSettings(newSettings: Record<string, unknown>) {
-		this.settings = { ...this.settings, ...newSettings };
+		return this.settings;
 	}
 
 	private writeStaticJSON(name: string, data: INodeTypeBaseDescription[] | ICredentialType[]) {
@@ -357,6 +380,22 @@ export class FrontendService {
 			if (overwrittenProperties.length) {
 				credential.__overwrittenProperties = uniq(overwrittenProperties);
 			}
+		}
+	}
+
+	/**
+	 * Whether this instance is running inside a Docker container.
+	 *
+	 * Based on: https://github.com/sindresorhus/is-docker
+	 */
+	private isDocker() {
+		try {
+			return (
+				fs.existsSync('/.dockerenv') ||
+				fs.readFileSync('/proc/self/cgroup', 'utf8').includes('docker')
+			);
+		} catch {
+			return false;
 		}
 	}
 }

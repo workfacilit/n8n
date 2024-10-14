@@ -71,7 +71,7 @@ export class EmbeddingsOpenAi implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Embeddings OpenAI',
 		name: 'embeddingsOpenAi',
-		icon: 'file:openAi.svg',
+		icon: { light: 'file:openAiLight.svg', dark: 'file:openAiLight.dark.svg' },
 		credentials: [
 			{
 				name: 'openAiApi',
@@ -171,7 +171,7 @@ export class EmbeddingsOpenAi implements INodeType {
 	};
 
 	async supplyData(this: IExecuteFunctions, itemIndex: number): Promise<SupplyData> {
-		this.logger.verbose('Supply data for embeddings');
+		this.logger.debug('Supply data for embeddings');
 		const credentials = await this.getCredentials('openAiApi');
 
 		const options = this.getNodeParameter('options', itemIndex, {}) as {
