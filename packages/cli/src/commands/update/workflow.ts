@@ -1,7 +1,9 @@
-import { Container } from 'typedi';
 import { Flags } from '@oclif/core';
-import { WorkflowRepository } from '@db/repositories/workflow.repository';
-import { BaseCommand } from '../BaseCommand';
+import { Container } from 'typedi';
+
+import { WorkflowRepository } from '@/databases/repositories/workflow.repository';
+
+import { BaseCommand } from '../base-command';
 
 export class UpdateWorkflowCommand extends BaseCommand {
 	static description = 'Update workflows';
@@ -28,24 +30,24 @@ export class UpdateWorkflowCommand extends BaseCommand {
 		const { flags } = await this.parse(UpdateWorkflowCommand);
 
 		if (!flags.all && !flags.id) {
-			console.info('Either option "--all" or "--id" have to be set!');
+			this.logger.error('Either option "--all" or "--id" have to be set!');
 			return;
 		}
 
 		if (flags.all && flags.id) {
-			console.info(
+			this.logger.error(
 				'Either something else on top should be "--all" or "--id" can be set never both!',
 			);
 			return;
 		}
 
 		if (flags.active === undefined) {
-			console.info('No update flag like "--active=true" has been set!');
+			this.logger.error('No update flag like "--active=true" has been set!');
 			return;
 		}
 
 		if (!['false', 'true'].includes(flags.active)) {
-			console.info('Valid values for flag "--active" are only "false" or "true"!');
+			this.logger.error('Valid values for flag "--active" are only "false" or "true"!');
 			return;
 		}
 

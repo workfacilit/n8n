@@ -6,7 +6,7 @@ import {
 	type INodeTypeDescription,
 	type SupplyData,
 } from 'n8n-workflow';
-import { TokenTextSplitter } from 'langchain/text_splitter';
+import { TokenTextSplitter } from '@langchain/textsplitters';
 import { logWrapper } from '../../../utils/logWrapper';
 import { getConnectionHintNoticeField } from '../../../utils/sharedFields';
 
@@ -57,7 +57,7 @@ export class TextSplitterTokenSplitter implements INodeType {
 	};
 
 	async supplyData(this: IExecuteFunctions, itemIndex: number): Promise<SupplyData> {
-		this.logger.verbose('Supply Data for Text Splitter');
+		this.logger.debug('Supply Data for Text Splitter');
 
 		const chunkSize = this.getNodeParameter('chunkSize', itemIndex) as number;
 		const chunkOverlap = this.getNodeParameter('chunkOverlap', itemIndex) as number;

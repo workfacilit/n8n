@@ -6,8 +6,8 @@ import {
 	type INodeTypeDescription,
 	type SupplyData,
 } from 'n8n-workflow';
-import type { CharacterTextSplitterParams } from 'langchain/text_splitter';
-import { CharacterTextSplitter } from 'langchain/text_splitter';
+import type { CharacterTextSplitterParams } from '@langchain/textsplitters';
+import { CharacterTextSplitter } from '@langchain/textsplitters';
 import { logWrapper } from '../../../utils/logWrapper';
 import { getConnectionHintNoticeField } from '../../../utils/sharedFields';
 
@@ -64,7 +64,7 @@ export class TextSplitterCharacterTextSplitter implements INodeType {
 	};
 
 	async supplyData(this: IExecuteFunctions, itemIndex: number): Promise<SupplyData> {
-		this.logger.verbose('Supply Data for Text Splitter');
+		this.logger.debug('Supply Data for Text Splitter');
 
 		const separator = this.getNodeParameter('separator', itemIndex) as string;
 		const chunkSize = this.getNodeParameter('chunkSize', itemIndex) as number;

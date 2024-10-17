@@ -9,8 +9,8 @@ import {
 import type {
 	RecursiveCharacterTextSplitterParams,
 	SupportedTextSplitterLanguage,
-} from 'langchain/text_splitter';
-import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
+} from '@langchain/textsplitters';
+import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import { logWrapper } from '../../../utils/logWrapper';
 import { getConnectionHintNoticeField } from '../../../utils/sharedFields';
 
@@ -95,7 +95,7 @@ export class TextSplitterRecursiveCharacterTextSplitter implements INodeType {
 	};
 
 	async supplyData(this: IExecuteFunctions, itemIndex: number): Promise<SupplyData> {
-		this.logger.verbose('Supply Data for Text Splitter');
+		this.logger.debug('Supply Data for Text Splitter');
 
 		const chunkSize = this.getNodeParameter('chunkSize', itemIndex) as number;
 		const chunkOverlap = this.getNodeParameter('chunkOverlap', itemIndex) as number;

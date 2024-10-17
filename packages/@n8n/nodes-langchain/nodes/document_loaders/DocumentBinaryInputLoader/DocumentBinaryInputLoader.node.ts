@@ -7,7 +7,7 @@ import {
 	type SupplyData,
 } from 'n8n-workflow';
 
-import type { TextSplitter } from 'langchain/text_splitter';
+import type { TextSplitter } from '@langchain/textsplitters';
 
 import { logWrapper } from '../../../utils/logWrapper';
 import { N8nBinaryLoader } from '../../../utils/N8nBinaryLoader';
@@ -178,7 +178,7 @@ export class DocumentBinaryInputLoader implements INodeType {
 	};
 
 	async supplyData(this: IExecuteFunctions): Promise<SupplyData> {
-		this.logger.verbose('Supply Data for Binary Input Loader');
+		this.logger.debug('Supply Data for Binary Input Loader');
 		const textSplitter = (await this.getInputConnectionData(
 			NodeConnectionType.AiTextSplitter,
 			0,
