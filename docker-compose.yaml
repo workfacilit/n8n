@@ -1,11 +1,11 @@
-version: "3.3"
+version: '3.3'
 
 services:
   n8n:
     image: samuellopes123/n8n:${TAG}
     restart: always
     ports:
-      - "127.0.0.1:5678:5678"
+      - '127.0.0.1:5678:5678'
     labels:
       - traefik.enable=true
       - traefik.http.routers.n8n.rule=Host(`${SUBDOMAIN}.${DOMAIN_NAME}`)
@@ -41,9 +41,9 @@ services:
       - N8N_EXTERNAL_STORAGE_S3_ACCESS_KEY=${N8N_EXTERNAL_STORAGE_S3_ACCESS_KEY}
       - N8N_EXTERNAL_STORAGE_S3_ACCESS_SECRET=${N8N_EXTERNAL_STORAGE_S3_ACCESS_SECRET}
       - N8N_RELEASE_TYPE=${N8N_RELEASE_TYPE}
+      - N8N_DEFAULT_LOCALE=pt-BR
     volumes:
       - n8n_data:/home/node/.n8n
 
 volumes:
   n8n_data:
-   

@@ -1,4 +1,4 @@
-ARG NODE_VERSION=18
+ARG NODE_VERSION=20
 
 # 1. Create an image to build n8n
 FROM --platform=linux/amd64 n8nio/base:${NODE_VERSION} as builder
@@ -6,9 +6,6 @@ FROM --platform=linux/amd64 n8nio/base:${NODE_VERSION} as builder
 # Build the application from source
 WORKDIR /src
 COPY . /src
-
-# Install pnpm 9.5
-RUN npm install -g pnpm@9.5 --force
 
 # Install dependencies and build the application
 RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store --mount=type=cache,id=pnpm-metadata,target=/root/.cache/pnpm/metadata pnpm install
