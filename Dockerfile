@@ -7,6 +7,9 @@ FROM --platform=linux/amd64 n8nio/base:${NODE_VERSION} as builder
 WORKDIR /src
 COPY . /src
 
+# Install pnpm 9.5
+RUN npm install -g pnpm@9.5
+
 # Remove pnpm-lock.yaml if it exists
 RUN rm -f pnpm-lock.yaml
 
