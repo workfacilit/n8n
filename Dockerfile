@@ -6,6 +6,11 @@ FROM --platform=linux/amd64 n8nio/base:${NODE_VERSION} as builder
 # Build the application from source
 WORKDIR /src
 COPY . /src
+
+# Remove pnpm-lock.yaml if it exists
+RUN rm -f pnpm-lock.yaml
+
+# Install dependencies and build the application
 RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store --mount=type=cache,id=pnpm-metadata,target=/root/.cache/pnpm/metadata pnpm install --frozen-lockfile
 RUN pnpm build
 
