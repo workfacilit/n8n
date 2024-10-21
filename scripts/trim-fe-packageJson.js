@@ -1,6 +1,6 @@
 const { writeFileSync } = require('fs');
 const { resolve } = require('path');
-const baseDir = resolve(__dirname, '../..');
+const baseDir = resolve(__dirname, '..');
 
 const trimPackageJson = (packageName) => {
 	const filePath = resolve(baseDir, 'packages', packageName, 'package.json');
