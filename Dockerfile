@@ -11,7 +11,7 @@ COPY . /src
 RUN npm install -g pnpm@9.5
 
 # Remove existing pnpm if it exists and install pnpm 9.5
-RUN rm -f /usr/local/bin/pnpm && npm install -g pnpm@9.5
+RUN npm install -g pnpm@9.5 --force
 
 # Install dependencies and build the application
 RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store --mount=type=cache,id=pnpm-metadata,target=/root/.cache/pnpm/metadata pnpm install
