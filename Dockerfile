@@ -16,7 +16,12 @@ RUN pnpm build
 
 # Delete all dev dependencies
 RUN jq 'del(.pnpm.patchedDependencies)' package.json > package.json.tmp; mv package.json.tmp package.json
-RUN node scripts/trim-fe-packageJson.js
+
+# Copie o script necessário
+COPY scripts/trim-fe-packageJson.js ./scripts/trim-fe-packageJson.js
+
+# Execute o script
+RUN node ./scripts/trim-fe-packageJson.js
 
 # Delete any source code, source-mapping, or typings
 RUN find . -type f -name "*.ts" -o -name "*.js.map" -o -name "*.vue" -o -name "tsconfig.json" -o -name "*.tsbuildinfo" | xargs rm -rf
