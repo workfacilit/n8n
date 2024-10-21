@@ -8,9 +8,6 @@ WORKDIR /src
 COPY . /src
 
 # Install pnpm 9.5
-RUN npm install -g pnpm@9.5
-
-# Remove existing pnpm if it exists and install pnpm 9.5
 RUN npm install -g pnpm@9.5 --force
 
 # Install dependencies and build the application
