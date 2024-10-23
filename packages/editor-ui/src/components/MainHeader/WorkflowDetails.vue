@@ -67,6 +67,8 @@ const props = defineProps<{
 	active: IWorkflowDb['active'];
 }>();
 
+const showInWFMenu = ref(false);
+
 const $style = useCssModule();
 
 const rootStore = useRootStore();
@@ -667,7 +669,7 @@ function showCreateWorkflowSuccessToast(id?: string) {
 					:workflow-permissions="workflowPermissions"
 				/>
 			</span>
-			<EnterpriseEdition :features="[EnterpriseEditionFeature.Sharing]">
+			<EnterpriseEdition v-if="showInWFMenu" :features="[EnterpriseEditionFeature.Sharing]">
 				<div :class="$style.group">
 					<CollaborationPane v-if="!isNewWorkflow" />
 					<N8nButton
@@ -720,8 +722,9 @@ function showCreateWorkflowSuccessToast(id?: string) {
 					@click="onSaveButtonClick"
 				/>
 				<WorkflowHistoryButton
+					v-if="showInWFMenu"
 					:workflow-id="props.id"
-					:is-feature-enabled="isWorkflowHistoryFeatureEnabled"
+					:is-feature-enabled="true"
 					:is-new-workflow="isNewWorkflow"
 					@upgrade="goToWorkflowHistoryUpgrade"
 				/>
@@ -816,6 +819,7 @@ $--header-spacing: 20px;
 	display: flex;
 	gap: var(--spacing-xs);
 }
+
 .hiddenInput {
 	display: none;
 }
