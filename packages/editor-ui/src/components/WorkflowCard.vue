@@ -82,10 +82,6 @@ const actions = computed(() => {
 			label: locale.baseText('workflows.item.open'),
 			value: WORKFLOW_LIST_ITEM_ACTIONS.OPEN,
 		},
-		{
-			label: locale.baseText('workflows.item.share'),
-			value: WORKFLOW_LIST_ITEM_ACTIONS.SHARE,
-		},
 	];
 
 	if (workflowPermissions.value.create && !props.readOnly) {

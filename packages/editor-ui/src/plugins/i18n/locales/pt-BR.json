@@ -2470,5 +2470,6 @@
 	"becomeCreator.closeButtonTitle": "Fechar",
 	"feedback.title": "Isso foi útil?",
 	"feedback.positive": "Eu achei isso útil",
-	"feedback.negative": "Eu não achei isso útil"
+	"feedback.negative": "Eu não achei isso útil",
+	"generic.ownedByMe": ""
 }

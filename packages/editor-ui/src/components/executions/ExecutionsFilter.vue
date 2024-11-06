@@ -30,6 +30,8 @@ const { debounce } = useDebounce();
 
 const telemetry = useTelemetry();
 
+const showInWF = false;
+
 const props = withDefaults(defineProps<ExecutionFilterProps>(), {
 	workflows: () => [] as Array<IWorkflowDb | IWorkflowShortResponse>,
 	popoverPlacement: 'bottom' as Placement,
@@ -284,7 +286,7 @@ onBeforeMount(() => {
 					/>
 				</n8n-select>
 			</div>
-			<div :class="$style.group">
+			<div v-if="showInWF" :class="$style.group">
 				<n8n-tooltip placement="right">
 					<template #content>
 						<i18n-t tag="span" keypath="executionsFilter.customData.docsTooltip" />
