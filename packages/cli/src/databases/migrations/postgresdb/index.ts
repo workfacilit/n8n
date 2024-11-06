@@ -57,7 +57,7 @@ import { DropRoleMapping1705429061930 } from '../common/1705429061930-DropRoleMa
 import { RemoveFailedExecutionStatus1711018413374 } from '../common/1711018413374-RemoveFailedExecutionStatus';
 import { MoveSshKeysToDatabase1711390882123 } from '../common/1711390882123-MoveSshKeysToDatabase';
 import { RemoveNodesAccess1712044305787 } from '../common/1712044305787-RemoveNodesAccess';
-import { CreateProject1714133768519 } from '../common/1714133768519-CreateProject';
+//import { CreateProject1714133768519 } from '../common/1714133768519-CreateProject';
 import { MakeExecutionStatusNonNullable1714133768521 } from '../common/1714133768521-MakeExecutionStatusNonNullable';
 import { AddConstraintToExecutionMetadata1720101653148 } from '../common/1720101653148-AddConstraintToExecutionMetadata';
 import { CreateInvalidAuthTokenTable1723627610222 } from '../common/1723627610222-CreateInvalidAuthTokenTable';
@@ -123,7 +123,7 @@ export const postgresMigrations: Migration[] = [
 	RemoveFailedExecutionStatus1711018413374,
 	MoveSshKeysToDatabase1711390882123,
 	RemoveNodesAccess1712044305787,
-	CreateProject1714133768519,
+	//CreateProject1714133768519,
 	MakeExecutionStatusNonNullable1714133768521,
 	AddActivatedAtUserSetting1717498465931,
 	AddConstraintToExecutionMetadata1720101653148,
