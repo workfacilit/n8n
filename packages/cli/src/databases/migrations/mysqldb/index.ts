@@ -124,7 +124,7 @@ export const mysqlMigrations: Migration[] = [
 	RemoveFailedExecutionStatus1711018413374,
 	MoveSshKeysToDatabase1711390882123,
 	RemoveNodesAccess1712044305787,
-	CreateProject1714133768519,
+	//CreateProject1714133768519,
 	MakeExecutionStatusNonNullable1714133768521,
 	AddActivatedAtUserSetting1717498465931,
 	AddConstraintToExecutionMetadata1720101653148,
